@@ -1,0 +1,179 @@
+# Web server configuration
+server:
+  # The server domain name.
+  domainname: http://localhost:5001
+  # Port on which the server will listen. the server binding is 0.0.0.0:{PORT}
+  port: 5001
+  # The UI hostname or IP address that mailers will point to.
+  host: 0.0.0.0
+  # The directory where the static files will be served from.
+  static_dir: data/static
+  # The directory where the web files will be served from.
+  web_dir: data/web
+  # The directory where the upload files will be served from.
+  upload_dir: data/upload
+  # SSl configuration
+  ssl:
+    enable: false
+    key: data/ssl/key.pem
+    cert: data/ssl/cert.pem
+  # Out of the box middleware configuration. to disable middleware you can changed the `enable` field to `false` of comment the middleware block
+  middlewares:
+    # Enable Etag cache header middleware
+    etag:
+      enable: true
+    # Allows to limit the payload size request. payload that bigger than this file will blocked the request.
+    limit_payload:
+      # Enable/Disable the middleware.
+      enable: true
+      # the limit size. can be b,kb,kib,mb,mib,gb,gib
+      body_limit: 5mb
+    # Generating a unique request ID and enhancing logging with additional information such as the start and completion of request processing, latency, status code, and other request details.
+    logger:
+      # Enable/Disable the middleware.
+      enable: true
+    # when your code is panicked, the request still returns 500 status code.
+    catch_panic:
+      # Enable/Disable the middleware.
+      enable: true
+    # Timeout for incoming requests middleware. requests that take more time from the configuration will cute and 408 status code will returned.
+    timeout_request:
+      # Enable/Disable the middleware.
+      enable: false
+      # Duration time in milliseconds.
+      timeout: 5000
+    cors:
+      enable: true
+      # Set the value of the [`Access-Control-Allow-Origin`][mdn] header
+      allow_origins:
+        - http://localhost:4000
+      # Set the value of the [`Access-Control-Allow-Headers`][mdn] header
+      # allow_headers:
+      # - Content-Type
+      # Set the value of the [`Access-Control-Allow-Methods`][mdn] header
+      # allow_methods:
+      #   - POST
+      # Set the value of the [`Access-Control-Max-Age`][mdn] header in seconds
+      max_age: 3600
+
+# Worker Configuration
+workers:
+  queues:
+    - default
+    - mailer
+  num_workers: 2
+
+# Database Configuration
+databases:
+  - name: primary
+    uri: "sqlite://db/qiluo.db"
+    #uri: "mysql://qiluo:Qiluo123@127.0.0.1:3306/qiluoopen"
+    max_connections: 16
+    min_connections: 2
+    connect_timeout: 3000
+    idle_timeout: 300000
+    enable_logging: false
+
+  - name: replica1
+    uri: "sqlite://db/qiluo.db"    
+    #uri: "mysql://qiluo:Qiluo123@127.0.0.1:3306/qiluoopen"
+    max_connections: 8
+    min_connections: 1
+    connect_timeout: 3000
+    idle_timeout: 300000
+    enable_logging: false
+
+  - name: replica2
+    uri: "sqlite://db/qiluo.db"
+    #uri: "mysql://qiluo:Qiluo123@127.0.0.1:3306/qiluoopen"
+    max_connections: 8
+    min_connections: 1
+    connect_timeout: 3000
+    idle_timeout: 300000
+    enable_logging: false
+db_routing:
+  default: "primary"         # Defaults to the first one if not configured
+  write:   "primary"         # Defaults to 'default' if not configured
+  reads:   ["replica1", "replica2"]
+
+  # Read replica selection strategy: round_robin | random | weighted
+  read_strategy: "weighted"
+
+  # Weights (only applies to weighted strategy; unconfigured read replicas default to weight 1)
+  read_weights:
+    replica1: 3
+    replica2: 1
+
+  # Retry attempts on error (total attempts = available read replicas + fallback_to_write(1/0) + retry_attempts)
+  retry_attempts: 2
+
+  # Circuit breaker duration for a failed read replica (milliseconds); won't be selected during this period
+  circuit_break_ms: 30000
+
+  # Whether to fall back to the write database when no healthy read replicas are available
+  fallback_to_write: true
+
+# Application logging configuration
+logger:
+  # Enable or disable logging.
+  enable: true
+  # Enable pretty backtrace (sets RUST_BACKTRACE=1)
+  pretty_backtrace: true
+  # Log level, options: trace, debug, info, warn or error.
+  level: trace
+  # Define the logging format. options: compact, pretty or json
+  format: compact
+  # By default the logger has filtering only logs that came from your code or logs that came from `loco` framework. to see all third party libraries
+  # Uncomment the line below to override to see all third party libraries you can enable this config and override the logger filters.
+  # override_filter: trace
+  log_file_cache: true
+  log_dir: data/log
+  file_name: app_log
+
+cache:
+  # Cache type, options: redis, memory
+  cache_type: memory
+  namespace: qiluo  
+  pool_size: 12
+  # Queue Configuration
+  url: {{ get_env(name="REDIS_URL", default="redis://127.0.0.1") }}
+# Mailer Configuration.
+mailer:
+  # Test mode: when enabled, emails will not be actually sent, only logged
+  stub: false
+  # SMTP mailer configuration.
+  smtp:
+    # Enable/Disable smtp mailer.
+    enable: true
+    # SMTP server host. e.x localhost, smtp.gmail.com
+    host: smtp.163.com
+    # SMTP server port
+    port: 465
+    # Use secure connection (SSL/TLS).
+    secure: true
+    auth:
+      user: xx@163.com
+      password: xxxxxx
+    # Default from sender
+    from: "Rust祺洛系统 <xx@163.com>"
+
+# Authentication Configuration
+auth:
+  # JWT authentication
+  jwt:
+    # Secret key for token generation and verification
+    secret: arxWd8PStcwb0jyRBENMQVE4Mn6T89Sl
+    # Token expiration time in seconds
+    expiration: 604800 # 7 days
+
+# genid
+snowgenera:
+  # Machine ID
+  machine_id: 1001
+  # Machine node
+  node_id: 1
+
+system:
+  # Super admin role ID list
+  super_role:
+    - 1
